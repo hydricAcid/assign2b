@@ -1,0 +1,8 @@
+{
+  "test_loss": 0.521121084690094,
+  "test_mae": 0.30051764845848083,
+  "training_time_seconds": 2345.918880701065,
+  "epochs_trained": 10,
+  "final_learning_rate": 0.001,
+  "timestamp": "2025-05-08 19:04:26"
+}

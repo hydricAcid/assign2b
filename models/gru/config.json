@@ -1,0 +1,25 @@
+{
+  "model_name": "enhanced_gru",
+  "gru_units": [
+    96,
+    64
+  ],
+  "dense_units": [
+    32,
+    16
+  ],
+  "dropout_rate": 0.3,
+  "recurrent_dropout": 0.2,
+  "learning_rate": 0.002,
+  "batch_size": 64,
+  "epochs": 10,
+  "patience": 10,
+  "use_residual": true,
+  "use_multi_head_attention": true,
+  "attention_heads": 4,
+  "use_batch_norm": false,
+  "use_layer_norm": true,
+  "l1_reg": 0.0001,
+  "l2_reg": 0.0001,
+  "schedule_learning_rate": true
+}

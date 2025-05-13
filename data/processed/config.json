@@ -1,0 +1,12 @@
+{
+  "look_back": 10,
+  "forecast_horizon": 1,
+  "test_size": 0.2,
+  "validation_size": 0.2,
+  "random_state": 42,
+  "min_samples": 50,
+  "scaler_type": "robust",
+  "add_time_features": true,
+  "use_data_augmentation": false,
+  "augmentation_factor": 0.05
+}

@@ -1,0 +1,3 @@
+----------NEW ENTRY----------
+Memory Usage: (156867, 12451357)
+Execution Time: 256.96420669555664 ms

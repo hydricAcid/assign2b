@@ -1,0 +1,13 @@
+├── evaluate.py          
+└── data/
+    └── process/
+        └── processed_data.csv
+    └── processed/
+        └── dataset.npz
+└── models/   
+    ├── mode_lstm.py  
+    ├── mode_gru.py     
+    └── mode_cnn.py  
+└── utils/
+    ├── __init__.py
+    └── preprocess.py  
