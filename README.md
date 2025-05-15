@@ -69,4 +69,12 @@ Output: RMSE and MAE metrics for each model.
 - Data is normalized per SCATS site using `MinMaxScaler`.
 - Evaluation is based on RMSE and MAE.
 
+---
+
+## 📬 Contact
+
+For questions or improvements, reach out to your project supervisor or instructor.
+
+---
+
 > Built for COS30019 Assignment 2B, 2025 Semester 1.

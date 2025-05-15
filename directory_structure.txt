@@ -1,13 +1,62 @@
-├── evaluate.py          
-└── data/
-    └── process/
-        └── processed_data.csv
-    └── processed/
-        └── dataset.npz
-└── models/   
-    ├── mode_lstm.py  
-    ├── mode_gru.py     
-    └── mode_cnn.py  
-└── utils/
-    ├── __init__.py
-    └── preprocess.py  
+TBRGS_Project/
+│
+├── data/
+│   ├── raw/
+│   │   ├── Scats_data_october_2006.xlsx
+│   │   ├── SCATSSiteListingSpreadsheet_VicRoads.xlsx
+│   │   ├── Traffic_Count_Locations_with_LONG_LAT.csv
+│   │   └── Traffic Flow to Travel Time Conversion v1.0.pdf
+│   └── processed/
+│       ├── dataset.npz
+│       ├── processed_data.csv
+│       ├── config.json
+│       └── metadata.json
+│
+├── models/
+│   ├── lstm/
+│   │   ├── best_model.keras
+│   │   ├── final_model.keras
+│   │   └── config.json
+│   ├── gru/
+│   │   ├── best_model.keras
+│   │   ├── final_model.keras
+│   │   └── config.json
+│   └── cnn/
+│       ├── best_model.keras
+│       ├── final_model.keras
+│       └── config.json
+│
+├── evaluation_results/
+│   ├── CNN_metrics.txt
+│   ├── CNN_plot.png
+│   ├── CNN_travel_time.csv
+│   └── CNN_predictions.csv
+│
+├── algorithms/
+│   ├── a_star.py
+│   ├── bfs.py
+│   ├── dfs.py
+│   ├── GBFS.py
+│   ├── custom1.py
+│   ├── custom2.py
+│   └── topk.py
+│
+├── utils/
+│   ├── preprocess.py
+│   ├── travel_time_graph.py
+│   └── __init__.py
+│
+├── main/
+│   ├── evaluate.py
+│   ├── model_lstm.py
+│   ├── model_gru.py
+│   ├── model_cnn.py
+│   ├── graph.py
+│   └── search.py
+│
+├── gui/
+│   └── gui_app.py
+│
+├── README.md
+├── requirements.txt
+└── log.txt

@@ -1,6 +1,9 @@
+tensorflow
 pandas
 numpy
-tensorflow
-scikit-learn
 matplotlib
+scikit-learn
 openpyxl
+tqdm
+seaborn
+networkx

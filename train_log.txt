@@ -1,0 +1,5 @@
+[20250513_150545] LSTM trained. MAE: 0.3086 | Saved to: models/lstm_20250513_150545
+[20250513_173616] LSTM trained. MAE: 0.3387 | Saved to: models/lstm_20250513_173616
+[20250514_134851] GRU trained. MAE: 0.3199 | Saved to: models/gru_20250514_134851
+[20250514_145422] GRU trained. MAE: 0.3043 | Saved to: models/gru_20250514_145422
+[20250514_152940] CNN trained. MAE: 0.2825 | Saved to: models/cnn_20250514_152940
