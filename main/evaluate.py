@@ -15,22 +15,18 @@ from utils.convert_to_travel_time import convert_flow_to_travel_time
 def evaluate_model(model_path, name="Model"):
     print(f"\n== Evaluation for {name} ==")
 
-    # Load dataset
     data = np.load("data/processed/dataset.npz", allow_pickle=True)
     X_test = data["X_test"]
     y_test = data["y_test"]
     site_ids = data["site_ids_test"]
 
-    # Load output scaler
     scaler_y = load("data/processed/output_scaler.pkl")
     y_test_orig = scaler_y.inverse_transform(y_test.reshape(-1, 1)).flatten()
 
-    # Load model
     model = load_model(model_path)
     y_pred = model.predict(X_test)
     y_pred_orig = scaler_y.inverse_transform(y_pred).flatten()
 
-    # Metrics
     mae = mean_absolute_error(y_test_orig, y_pred_orig)
     rmse = mean_squared_error(y_test_orig, y_pred_orig) ** 0.5
     r2 = r2_score(y_test_orig, y_pred_orig)
@@ -39,13 +35,11 @@ def evaluate_model(model_path, name="Model"):
     print(f"RMSE: {rmse:.4f}")
     print(f"R²:   {r2:.4f}")
 
-    # Save metrics
     os.makedirs("evaluation_results", exist_ok=True)
     metrics_path = os.path.join("evaluation_results", f"{name}_metrics.json")
     with open(metrics_path, "w") as f:
         json.dump({"mae": mae, "rmse": rmse, "r2": r2}, f, indent=2)
 
-    # Save predictions to CSV
     df = pd.DataFrame(
         {
             "SCATS_ID": site_ids,
@@ -57,7 +51,6 @@ def evaluate_model(model_path, name="Model"):
     csv_path = os.path.join("evaluation_results", f"{name}_predictions.csv")
     df.to_csv(csv_path, index=False)
 
-    # Save plot
     plt.figure(figsize=(12, 4))
     plt.plot(y_test_orig[:100], label="Actual")
     plt.plot(y_pred_orig[:100], label="Predicted")

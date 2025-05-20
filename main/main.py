@@ -4,17 +4,17 @@ from search import SearchAlgorithmExecutor
 
 def main():
     print("=== Traffic Path Finder ===")
-    algo = input("Nhập thuật toán (a_star, bfs, dfs, gbfs, custom1, custom2): ").strip()
-    start_node = input("Nhập SCATS ID bắt đầu: ").strip()
-    goal_node = input("Nhập SCATS ID kết thúc: ").strip()
+    algo = input("Enter algorithm (a_star, bfs, dfs, gbfs, custom1, custom2): ").strip()
+    start_node = input("Enter SCATS ID origin: ").strip()
+    goal_node = input("Enter SCATS ID destination: ").strip()
 
     graph = Graph("data/weighted_edges.txt")
 
     if not graph.has_node(start_node):
-        print(f"❌ Start node {start_node} không tồn tại.")
+        print(f"❌ Start node {start_node} not found.")
         return
     if not graph.has_node(goal_node):
-        print(f"❌ Goal node {goal_node} không tồn tại.")
+        print(f"❌ Goal node {goal_node} not found.")
         return
 
     executor = SearchAlgorithmExecutor(graph, algo)

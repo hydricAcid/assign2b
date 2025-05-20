@@ -41,12 +41,11 @@ def preprocess_data():
     df = pd.read_excel(file_path, sheet_name="Data", header=1)
     df.columns = df.columns.astype(str).str.strip()
 
-    print("✅ Cột chuẩn sau khi reset header:")
+    print("✅ Standard column after header reset:")
     print(df.columns.tolist())
 
     df = df.rename(columns={"Date": "Timestamp"})
 
-    # ✅ Chuyển sang dạng long format
     df_long = df.melt(
         id_vars=["SCATS Number", "NB_LATITUDE", "NB_LONGITUDE", "Timestamp"],
         var_name="Interval",
@@ -93,7 +92,6 @@ def preprocess_data():
     y_all = np.concatenate(y_all)
     site_ids_all = np.array(site_ids_all)
 
-    # ✅ Scale dữ liệu
     scaler_X = RobustScaler() if config["scaler_type"] == "robust" else MinMaxScaler()
     scaler_y = RobustScaler() if config["scaler_type"] == "robust" else MinMaxScaler()
 
@@ -106,7 +104,6 @@ def preprocess_data():
     dump(scaler_y, "data/processed/output_scaler.pkl")
     logger.info("✅ Output scaler saved to data/processed/output_scaler.pkl")
 
-    # ✅ Shuffle
     rng = np.random.RandomState(config["random_state"])
     indices = rng.permutation(len(X_all_scaled))
 
@@ -114,7 +111,6 @@ def preprocess_data():
     y_all_scaled = y_all_scaled[indices]
     site_ids_all = site_ids_all[indices]
 
-    # ✅ Split
     N = len(X_all_scaled)
     test_size = int(config["test_size"] * N)
     val_size = int(config["validation_size"] * N)
@@ -135,7 +131,6 @@ def preprocess_data():
         site_ids_all[test_size + val_size :],
     )
 
-    # ✅ Lưu kết quả
     np.savez(
         "data/processed/dataset.npz",
         X_train=X_train,

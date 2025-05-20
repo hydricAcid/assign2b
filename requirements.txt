@@ -7,3 +7,4 @@ openpyxl
 tqdm
 seaborn
 networkx
+python 3.10

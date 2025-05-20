@@ -1,83 +1,58 @@
-import heapq
-import copy
+import os
+import sys
+from heapq import heappush, heappop
+from copy import deepcopy
+
+sys.path.append(os.path.abspath("main"))
+from graph import Graph
+from algorithms.a_star import AStar
 
 
-class TopKShortestPaths:
-    def __init__(self, graph, k):
-        self.graph = graph
-        self.k = k
+def yen_k_shortest_paths(graph: Graph, start: str, goal: str, k: int = 3):
+    if start == goal:
+        return [(0.0, [start])]
 
-    def dijkstra(self, source, target, banned_edges):
-        visited = set()
-        dist = {node: float("inf") for node in self.graph.nodes}
-        prev = {node: None for node in self.graph.nodes}
-        dist[source] = 0
-        heap = [(0, source)]
+    shortest_paths = []
+    potential_paths = []
 
-        while heap:
-            cost, current = heapq.heappop(heap)
-            if current == target:
+    base_path, base_cost = AStar(graph).search(start, goal)
+    if not base_path:
+        return []
+
+    shortest_paths.append((base_cost, base_path))
+
+    for i in range(1, k):
+        for j in range(len(shortest_paths[-1][1]) - 1):
+            spur_node = shortest_paths[-1][1][j]
+            root_path = shortest_paths[-1][1][: j + 1]
+
+            temp_graph = deepcopy(graph)
+
+            for cost, path in shortest_paths:
+                if path[: j + 1] == root_path and len(path) > j + 1:
+                    u, v = path[j], path[j + 1]
+                    temp_graph.edges[u] = [
+                        (n, w) for (n, w) in temp_graph.edges.get(u, []) if n != v
+                    ]
+
+            for node in root_path[:-1]:
+                temp_graph.edges.pop(node, None)
+
+            spur_path, spur_cost = AStar(temp_graph).search(spur_node, goal)
+
+            if spur_path and spur_node in spur_path:
+                full_path = root_path[:-1] + spur_path
+                total_cost = graph.calculate_path_cost(full_path)
+                if (total_cost, full_path) not in potential_paths:
+                    heappush(potential_paths, (total_cost, full_path))
+
+        if not potential_paths:
+            break
+
+        while potential_paths:
+            next_path = heappop(potential_paths)
+            if next_path not in shortest_paths:
+                shortest_paths.append(next_path)
                 break
-            if current in visited:
-                continue
-            visited.add(current)
 
-            for neighbor, weight in self.graph.edges.get(current, {}).items():
-                if (current, neighbor) in banned_edges:
-                    continue
-                alt = cost + weight
-                if alt < dist[neighbor]:
-                    dist[neighbor] = alt
-                    prev[neighbor] = current
-                    heapq.heappush(heap, (alt, neighbor))
-
-        # Reconstruct path
-        path = []
-        node = target
-        while node is not None:
-            path.insert(0, node)
-            node = prev[node]
-        if path and path[0] == source:
-            return path, dist[target]
-        else:
-            return None, float("inf")
-
-    def search(self):
-        source = self.graph.origin
-        target = self.graph.destinations[0]
-        paths = []
-
-        # First shortest path
-        path, cost = self.dijkstra(source, target, set())
-        if not path:
-            return []
-        paths.append((path, cost))
-        candidates = []
-
-        for k in range(1, self.k):
-            for i in range(len(paths[0][0]) - 1):
-                spur_node = paths[0][0][i]
-                root_path = paths[0][0][: i + 1]
-
-                banned_edges = set()
-                for p, _ in paths:
-                    if p[: i + 1] == root_path and i + 1 < len(p):
-                        banned_edges.add((p[i], p[i + 1]))
-
-                spur_path, spur_cost = self.dijkstra(spur_node, target, banned_edges)
-                if spur_path:
-                    total_path = root_path[:-1] + spur_path
-                    total_cost = 0
-                    for i in range(len(total_path) - 1):
-                        u, v = total_path[i], total_path[i + 1]
-                        total_cost += self.graph.get_cost(u, v)
-                    candidate = (total_path, total_cost)
-                    if candidate not in candidates and candidate not in paths:
-                        candidates.append(candidate)
-
-            if not candidates:
-                break
-            candidates.sort(key=lambda x: x[1])
-            paths.append(candidates.pop(0))
-
-        return paths
+    return shortest_paths
