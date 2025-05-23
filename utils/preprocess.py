@@ -53,6 +53,7 @@ def preprocess_data():
     df_long = df_long[df_long["Flow"] >= 0]
 
     df_long["hour"] = df_long["Timestamp"].dt.hour
+    df_long["dayofweek"] = df_long["Timestamp"].dt.dayofweek  # ✅ thêm lại đặc trưng
 
     avg_coords = (
         df_long.groupby("SCATS Number")[["NB_LATITUDE", "NB_LONGITUDE"]]
@@ -68,34 +69,43 @@ def preprocess_data():
 
     logger.info("Preparing sequences for model training...")
 
-    X_all, y_all, site_ids_all = [], [], []
+    X_all, y_all, site_ids_all, timestamps_all = [], [], [], []
 
     for scats_id, df_group in df_long.groupby("SCATS Number"):
         df_group = df_group.sort_values("Timestamp")
-        df_group = df_group[["Flow", "hour"]].copy()
-        data = df_group.values.astype(np.float32)
+        df_group = df_group[["Flow", "hour", "dayofweek", "Timestamp"]].copy()
+
+        data = df_group[["Flow", "hour", "dayofweek"]].values.astype(np.float32)
+        timestamps = df_group["Timestamp"].values
 
         if len(data) < config["look_back"] + config["forecast_horizon"]:
             continue
 
-        X, y = [], []
+        X, y, ts = [], [], []
         for i in range(
             len(data) - config["look_back"] - config["forecast_horizon"] + 1
         ):
             window = data[i : i + config["look_back"]]
             target = data[i + config["look_back"] + config["forecast_horizon"] - 1][0]
+            timestamp = timestamps[
+                i + config["look_back"] + config["forecast_horizon"] - 1
+            ]
+
             X.append(window)
             y.append(target)
+            ts.append(timestamp)
 
         X_all.append(np.array(X, dtype=np.float32))
         y_all.append(np.array(y, dtype=np.float32))
         site_ids_all += [int(scats_id)] * len(y)
+        timestamps_all += ts
 
         logger.info(f"Processed SCATS {scats_id}: {len(y)} sequences")
 
     X_all = np.concatenate(X_all).astype(np.float32)
     y_all = np.concatenate(y_all).astype(np.float32)
     site_ids_all = np.array(site_ids_all, dtype=np.int32)
+    timestamps_all = np.array(timestamps_all, dtype="datetime64[s]")
 
     # Scale flow only (feature 0)
     scaler_X = RobustScaler()
@@ -113,6 +123,7 @@ def preprocess_data():
     X_all = X_all[indices]
     y_all_scaled = y_all_scaled[indices]
     site_ids_all = site_ids_all[indices]
+    timestamps_all = timestamps_all[indices]
 
     N = len(X_all)
     test_size = int(config["test_size"] * N)
@@ -121,14 +132,17 @@ def preprocess_data():
     X_test = X_all[:test_size]
     y_test = y_all_scaled[:test_size]
     site_ids_test = site_ids_all[:test_size]
+    timestamps_test = timestamps_all[:test_size]
 
     X_val = X_all[test_size : test_size + val_size]
     y_val = y_all_scaled[test_size : test_size + val_size]
     site_ids_val = site_ids_all[test_size : test_size + val_size]
+    timestamps_val = timestamps_all[test_size : test_size + val_size]
 
     X_train = X_all[test_size + val_size :]
     y_train = y_all_scaled[test_size + val_size :]
     site_ids_train = site_ids_all[test_size + val_size :]
+    timestamps_train = timestamps_all[test_size + val_size :]
 
     np.savez_compressed(
         "data/processed/dataset.npz",
@@ -141,6 +155,9 @@ def preprocess_data():
         site_ids_train=site_ids_train,
         site_ids_val=site_ids_val,
         site_ids_test=site_ids_test,
+        timestamps_train=timestamps_train,
+        timestamps_val=timestamps_val,
+        timestamps_test=timestamps_test,
     )
 
     logger.info("✅ Preprocessing complete. Total sequences: %d", len(X_all))
