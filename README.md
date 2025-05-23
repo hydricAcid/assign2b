@@ -11,18 +11,20 @@
 
 ## 🛠 How to Train
 
-1. Process data
+## 🛠️ How to Train
+
+1. **Process data**  
    python utils/preprocess.py
 
-2. Train models
-   python main/model_lstm.py
-   python main/model_gru.py
+2. **Train models**  
+   python main/model_lstm.py  
+   python main/model_gru.py  
    python main/model_cnn.py
 
-3. Travel time
-   python main/evalute.py
-   python utils/convert_to_travel_time.py
-   python utils/generate_edges_from_location.py
+3. **Travel time prediction & edge generation**  
+   python main/evaluate.py  
+   python utils/convert_to_travel_time.py  
+   python utils/generate_edges_from_location.py  
    python utils/generate_weighted_edges.py
 
 ## 🛠 How to Run
