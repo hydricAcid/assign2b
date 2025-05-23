@@ -9,8 +9,6 @@
 - Tkinter-based GUI with interactive node selection and path highlighting
 - Dynamic travel time estimation using CNN predictions
 
-## 🛠 How to Train
-
 ## 🛠️ How to Train
 
 1. **Process data**  
