@@ -13,14 +13,6 @@ logging.basicConfig(
 logger = logging.getLogger("traffic_preprocessing")
 
 
-def create_sequences(series, look_back=10, forecast_horizon=1):
-    X, y = [], []
-    for i in range(len(series) - look_back - forecast_horizon + 1):
-        X.append(series[i : i + look_back])
-        y.append(series[i + look_back + forecast_horizon - 1])
-    return np.array(X), np.array(y)
-
-
 def preprocess_data():
     config = {
         "look_back": 10,
@@ -31,8 +23,6 @@ def preprocess_data():
         "min_samples": 50,
         "scaler_type": "robust",
         "add_time_features": True,
-        "use_data_augmentation": False,
-        "augmentation_factor": 0.05,
     }
 
     logger.info(f"Starting preprocessing with config: {config}")
@@ -49,7 +39,6 @@ def preprocess_data():
     )
 
     df_long = df_long[(df_long["NB_LATITUDE"] != 0) & (df_long["NB_LONGITUDE"] != 0)]
-
     df_long = df_long[df_long["Interval"].str.match(r"^V\d{2}$")]
 
     def interval_to_time(iv):
@@ -57,37 +46,29 @@ def preprocess_data():
         return timedelta(minutes=15 * idx)
 
     df_long["Time"] = df_long["Interval"].apply(interval_to_time)
-    df_long["Timestamp"] = (
-        pd.to_datetime(df_long["Timestamp"], errors="coerce") + df_long["Time"]
-    )
+    df_long["Timestamp"] = pd.to_datetime(df_long["Timestamp"], errors="coerce") + df_long["Time"]
 
     df_long = df_long.dropna(subset=["Timestamp", "Flow"])
-    logger.info(f"Cleaned data rows: {df_long.shape[0]} remaining")
-
-    if config["add_time_features"]:
-        logger.info("Adding time-based features")
-        df_long["hour"] = df_long["Timestamp"].dt.hour
-        df_long["dayofweek"] = df_long["Timestamp"].dt.dayofweek
-
     df_long["Flow"] = pd.to_numeric(df_long["Flow"], errors="coerce")
     df_long = df_long.dropna(subset=["Flow"])
     df_long = df_long[df_long["Flow"] >= 0]
 
+    if config["add_time_features"]:
+        df_long["hour"] = df_long["Timestamp"].dt.hour
+        df_long["dayofweek"] = df_long["Timestamp"].dt.dayofweek
+
+    # Lưu node trung bình
     avg_coords = (
         df_long.groupby("SCATS Number")[["NB_LATITUDE", "NB_LONGITUDE"]]
         .mean()
         .reset_index()
         .rename(columns={"NB_LATITUDE": "Avg_LAT", "NB_LONGITUDE": "Avg_LON"})
     )
-
     avg_coords.to_csv("data/doc/nodes_averaged.txt", index=False)
-    logger.info("✅ Saved averaged node coordinates to data/doc/nodes_averaged.txt")
-
     df_long = df_long.merge(avg_coords, on="SCATS Number", how="left")
 
     os.makedirs("data/processed", exist_ok=True)
     df_long.to_csv("data/processed/processed_data.csv", index=False)
-    logger.info("Saved processed data to data/processed/processed_data.csv")
 
     logger.info("Preparing sequences for model training...")
 
@@ -95,34 +76,37 @@ def preprocess_data():
 
     for scats_id, df_group in df_long.groupby("SCATS Number"):
         df_group = df_group.sort_values("Timestamp")
-        series = df_group["Flow"].values
+        df_group = df_group[["Flow", "hour", "dayofweek"]].copy()
+        data = df_group.values  # (n_samples, 3 features)
 
-        if len(series) < config["look_back"] + config["forecast_horizon"]:
+        if len(data) < config["look_back"] + config["forecast_horizon"]:
             continue
 
-        X, y = create_sequences(series, config["look_back"], config["forecast_horizon"])
+        X, y = [], []
+        for i in range(len(data) - config["look_back"] - config["forecast_horizon"] + 1):
+            window = data[i : i + config["look_back"]]
+            target = data[i + config["look_back"] + config["forecast_horizon"] - 1][0]
+            X.append(window)
+            y.append(target)
 
-        X_all.append(X)
-        y_all.append(y)
+        X_all.append(np.array(X))
+        y_all.append(np.array(y))
         site_ids_all += [str(scats_id)] * len(y)
 
-        logger.info(f"Processed SCATS {scats_id}: created {len(y)} sequences")
+        logger.info(f"Processed SCATS {scats_id}: {len(y)} sequences")
 
     X_all = np.concatenate(X_all)
     y_all = np.concatenate(y_all)
     site_ids_all = np.array(site_ids_all)
 
-    scaler_X = RobustScaler() if config["scaler_type"] == "robust" else MinMaxScaler()
-    scaler_y = RobustScaler() if config["scaler_type"] == "robust" else MinMaxScaler()
+    # Normalize (chỉ scale Flow, giữ nguyên hour & dayofweek)
+    scaler_X = RobustScaler()
+    X_all_scaled = X_all.copy()
+    X_all_scaled[:, :, 0] = scaler_X.fit_transform(X_all[:, :, 0])  # scale Flow only
 
-    X_shape = X_all.shape
-    X_all_scaled = scaler_X.fit_transform(X_all.reshape(-1, X_shape[-1])).reshape(
-        X_shape
-    )
+    scaler_y = RobustScaler()
     y_all_scaled = scaler_y.fit_transform(y_all.reshape(-1, 1)).flatten()
-
     dump(scaler_y, "data/processed/output_scaler.pkl")
-    logger.info("✅ Output scaler saved to data/processed/output_scaler.pkl")
 
     rng = np.random.RandomState(config["random_state"])
     indices = rng.permutation(len(X_all_scaled))
@@ -141,14 +125,14 @@ def preprocess_data():
         site_ids_all[:test_size],
     )
     X_val, y_val, site_ids_val = (
-        X_all_scaled[test_size : test_size + val_size],
-        y_all_scaled[test_size : test_size + val_size],
-        site_ids_all[test_size : test_size + val_size],
+        X_all_scaled[test_size:test_size + val_size],
+        y_all_scaled[test_size:test_size + val_size],
+        site_ids_all[test_size:test_size + val_size],
     )
     X_train, y_train, site_ids_train = (
-        X_all_scaled[test_size + val_size :],
-        y_all_scaled[test_size + val_size :],
-        site_ids_all[test_size + val_size :],
+        X_all_scaled[test_size + val_size:],
+        y_all_scaled[test_size + val_size:],
+        site_ids_all[test_size + val_size:],
     )
 
     np.savez(
