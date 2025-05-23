@@ -1,16 +1,47 @@
 TBRGS_Project/
 │
+├── algorithms/
+│   ├── a_star.py
+│   ├── bfs.py
+│   ├── dfs.py
+│   ├── GBFS.py
+│   ├── custom1.py
+│   ├── custom2.py
+│   ├── search_algorithm.py
+│   └── topk.py
+│
 ├── data/
 │   ├── raw/
 │   │   ├── Scats_data_october_2006.xlsx
 │   │   ├── SCATSSiteListingSpreadsheet_VicRoads.xlsx
 │   │   ├── Traffic_Count_Locations_with_LONG_LAT.csv
 │   │   └── Traffic Flow to Travel Time Conversion v1.0.pdf
+│   ├── doc/
+│   │   ├── input_graph_edges.txt
+│   │   ├── nodes_averaged.txt
+│   │   └── weighted_edges.txt
 │   └── processed/
 │       ├── dataset.npz
 │       ├── processed_data.csv
-│       ├── config.json
-│       └── metadata.json
+│       └── output_scaler.pkl
+│
+├── evaluation_results/
+│   ├── CNN_metrics.json
+│   ├── CNN_plot.png
+│   ├── CNN_travel_time.csv
+│   └── CNN_predictions.csv
+│
+├── gui/
+│   └── main_gui.py
+│
+├── main/
+│   ├── evaluate.py
+│   ├── graph.py
+│   ├── main.py
+│   ├── model_lstm.py
+│   ├── model_gru.py
+│   ├── model_cnn.py
+│   └── search.py
 │
 ├── models/
 │   ├── lstm/
@@ -26,37 +57,12 @@ TBRGS_Project/
 │       ├── final_model.keras
 │       └── config.json
 │
-├── evaluation_results/
-│   ├── CNN_metrics.txt
-│   ├── CNN_plot.png
-│   ├── CNN_travel_time.csv
-│   └── CNN_predictions.csv
-│
-├── algorithms/
-│   ├── a_star.py
-│   ├── bfs.py
-│   ├── dfs.py
-│   ├── GBFS.py
-│   ├── custom1.py
-│   ├── custom2.py
-│   └── topk.py
-│
 ├── utils/
 │   ├── preprocess.py
-│   ├── travel_time_graph.py
-│   └── __init__.py
-│
-├── main/
-│   ├── evaluate.py
-│   ├── model_lstm.py
-│   ├── model_gru.py
-│   ├── model_cnn.py
-│   ├── graph.py
-│   └── search.py
-│
-├── gui/
-│   └── gui_app.py
+│   ├── generate_edges_from_location.py
+│   ├── convert_to_travel_time.py
+│   └── generate_weighted_edges.py
 │
 ├── README.md
 ├── requirements.txt
-└── log.txt
+└── train_log.txt

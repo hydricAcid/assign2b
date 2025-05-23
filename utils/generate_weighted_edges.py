@@ -2,9 +2,9 @@ import pandas as pd
 
 
 def generate_weighted_edges(
-    edges_path="data/input_graph_edges_bidirectional.txt",
+    edges_path="data/doc/input_graph_edges.txt",
     cnn_predictions_path="evaluation_results/CNN_predictions.csv",
-    output_path="data/weighted_edges.txt",
+    output_path="data/doc/weighted_edges.txt",
 ):
     edges = []
     with open(edges_path, "r") as f:

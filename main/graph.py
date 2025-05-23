@@ -1,4 +1,5 @@
 import math
+import pandas as pd
 
 
 class Graph:
@@ -8,17 +9,16 @@ class Graph:
 
     def load_nodes(self, filepath):
         self.nodes.clear()
-        with open(filepath, "r", encoding="utf-8") as f:
-            for line in f:
-                parts = line.strip().split()
-                if len(parts) >= 3:
-                    node_id = parts[0]
-                    try:
-                        lat = float(parts[1])
-                        lon = float(parts[2])
-                        self.nodes[node_id] = (lat, lon)
-                    except ValueError:
-                        continue
+        df = pd.read_csv(filepath)
+
+        for _, row in df.iterrows():
+            try:
+                node_id = str(int(row["SCATS Number"]))
+                lat = float(row["Avg_LAT"])
+                lon = float(row["Avg_LON"])
+                self.nodes[node_id] = (lat, lon)
+            except (ValueError, KeyError):
+                continue
 
     def load_weighted_edges(self, filepath):
         self.edges.clear()
@@ -52,3 +52,6 @@ class Graph:
                     total += weight
                     break
         return total
+
+    def has_node(self, node_id):
+        return node_id in self.nodes

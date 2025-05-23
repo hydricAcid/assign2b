@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import RobustScaler, MinMaxScaler
-from datetime import datetime
+from datetime import timedelta
 import logging
 from joblib import dump
 
@@ -40,10 +40,6 @@ def preprocess_data():
     file_path = "data/raw/Scats_data_october_2006.xlsx"
     df = pd.read_excel(file_path, sheet_name="Data", header=1)
     df.columns = df.columns.astype(str).str.strip()
-
-    print("✅ Standard column after header reset:")
-    print(df.columns.tolist())
-
     df = df.rename(columns={"Date": "Timestamp"})
 
     df_long = df.melt(
@@ -52,9 +48,21 @@ def preprocess_data():
         value_name="Flow",
     )
 
-    df_long["Timestamp"] = pd.to_datetime(df_long["Timestamp"], errors="coerce")
+    df_long = df_long[(df_long["NB_LATITUDE"] != 0) & (df_long["NB_LONGITUDE"] != 0)]
+
+    df_long = df_long[df_long["Interval"].str.match(r"^V\d{2}$")]
+
+    def interval_to_time(iv):
+        idx = int(iv[1:])
+        return timedelta(minutes=15 * idx)
+
+    df_long["Time"] = df_long["Interval"].apply(interval_to_time)
+    df_long["Timestamp"] = (
+        pd.to_datetime(df_long["Timestamp"], errors="coerce") + df_long["Time"]
+    )
+
     df_long = df_long.dropna(subset=["Timestamp", "Flow"])
-    logger.info(f"Removed {df.shape[0] - df_long.shape[0]} invalid records")
+    logger.info(f"Cleaned data rows: {df_long.shape[0]} remaining")
 
     if config["add_time_features"]:
         logger.info("Adding time-based features")
@@ -64,6 +72,18 @@ def preprocess_data():
     df_long["Flow"] = pd.to_numeric(df_long["Flow"], errors="coerce")
     df_long = df_long.dropna(subset=["Flow"])
     df_long = df_long[df_long["Flow"] >= 0]
+
+    avg_coords = (
+        df_long.groupby("SCATS Number")[["NB_LATITUDE", "NB_LONGITUDE"]]
+        .mean()
+        .reset_index()
+        .rename(columns={"NB_LATITUDE": "Avg_LAT", "NB_LONGITUDE": "Avg_LON"})
+    )
+
+    avg_coords.to_csv("data/doc/nodes_averaged.txt", index=False)
+    logger.info("✅ Saved averaged node coordinates to data/doc/nodes_averaged.txt")
+
+    df_long = df_long.merge(avg_coords, on="SCATS Number", how="left")
 
     os.makedirs("data/processed", exist_ok=True)
     df_long.to_csv("data/processed/processed_data.csv", index=False)
@@ -145,6 +165,23 @@ def preprocess_data():
     )
 
     logger.info("✅ Preprocessing complete. Total sequences: %d", len(X_all_scaled))
+
+
+def load_data(npz_path):
+    data = np.load(npz_path)
+    X_train = data["X_train"]
+    y_train = data["y_train"]
+    X_val = data["X_val"]
+    y_val = data["y_val"]
+    X_test = data["X_test"]
+    y_test = data["y_test"]
+
+    if X_train.ndim == 2:
+        X_train = X_train[..., np.newaxis]
+        X_val = X_val[..., np.newaxis]
+        X_test = X_test[..., np.newaxis]
+
+    return X_train, y_train, X_val, y_val, X_test, y_test
 
 
 if __name__ == "__main__":

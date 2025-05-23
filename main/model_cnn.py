@@ -35,22 +35,23 @@ from utils.preprocess import load_data
 
 CONFIG = {
     "model_name": "cnn",
-    "filters": [64, 128],
+    "filters": [32, 64],                   
     "kernel_sizes": [3, 5],
-    "dense_units": [64],
-    "dropout_rate": 0.3,
-    "spatial_dropout": 0.2,
-    "learning_rate": 0.001,
-    "batch_size": 64,
-    "epochs": 40,
-    "patience": 10,
-    "use_residual": True,
-    "use_inception": True,
+    "dense_units": [32],                   
+    "dropout_rate": 0.2,                  
+    "spatial_dropout": 0.1,
+    "learning_rate": 0.001,                
+    "batch_size": 64,                      
+    "epochs": 50,                         
+    "patience": 10,                      
+    "use_residual": True,               
+    "use_inception": True,                
     "use_batch_norm": True,
     "use_layer_norm": False,
-    "l1_reg": 0.0001,
-    "l2_reg": 0.0001,
+    "l1_reg": 1e-5,                       
+    "l2_reg": 1e-4,
 }
+
 
 
 def inception_module(x, filters, kernel_sizes=[1, 3, 5], prefix="inception"):

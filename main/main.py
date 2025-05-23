@@ -8,7 +8,7 @@ def main():
     start_node = input("Enter SCATS ID origin: ").strip()
     goal_node = input("Enter SCATS ID destination: ").strip()
 
-    graph = Graph("data/weighted_edges.txt")
+    graph = Graph("data/doc/weighted_edges.txt")
 
     if not graph.has_node(start_node):
         print(f"❌ Start node {start_node} not found.")

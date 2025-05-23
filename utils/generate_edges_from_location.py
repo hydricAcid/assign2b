@@ -1,9 +1,8 @@
 import pandas as pd
 from geopy.distance import geodesic
 
-nodes = pd.read_csv(
-    "data/nodes_averaged.txt", sep=" ", header=None, names=["SCATS_ID", "LAT", "LON"]
-)
+nodes = pd.read_csv("data/doc/nodes_averaged.txt", sep=",", header=0)
+
 
 edges = []
 threshold = 2  # km
@@ -16,8 +15,9 @@ for i in range(len(nodes)):
         if dist <= threshold:
             edges.append((str(id1), str(id2)))
 
-with open("data/input_graph_edges.txt", "w") as f:
+with open("data/doc/input_graph_edges.txt", "w") as f:
     for id1, id2 in edges:
         f.write(f"{id1} {id2}\n")
+        f.write(f"{id2} {id1}\n")
 
 print(f"✅ Create {len(edges)} edges in file input_graph_edges.txt")

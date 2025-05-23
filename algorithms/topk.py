@@ -3,19 +3,24 @@ import sys
 from heapq import heappush, heappop
 from copy import deepcopy
 
-sys.path.append(os.path.abspath("main"))
-from graph import Graph
-from algorithms.a_star import AStar
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from main.graph import Graph
 
 
-def yen_k_shortest_paths(graph: Graph, start: str, goal: str, k: int = 3):
+def yen_k_shortest_paths(
+    graph: Graph, start: str, goal: str, k: int = 3, search_algorithm_class=None
+):
     if start == goal:
         return [(0.0, [start])]
+
+    if search_algorithm_class is None:
+        raise ValueError("A search algorithm class must be provided.")
 
     shortest_paths = []
     potential_paths = []
 
-    base_path, base_cost = AStar(graph).search(start, goal)
+    base_algorithm = search_algorithm_class(graph)
+    base_path, base_cost = base_algorithm.search(start, goal)
     if not base_path:
         return []
 
@@ -38,7 +43,8 @@ def yen_k_shortest_paths(graph: Graph, start: str, goal: str, k: int = 3):
             for node in root_path[:-1]:
                 temp_graph.edges.pop(node, None)
 
-            spur_path, spur_cost = AStar(temp_graph).search(spur_node, goal)
+            spur_algorithm = search_algorithm_class(temp_graph)
+            spur_path, spur_cost = spur_algorithm.search(spur_node, goal)
 
             if spur_path and spur_node in spur_path:
                 full_path = root_path[:-1] + spur_path

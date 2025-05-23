@@ -65,4 +65,4 @@ def evaluate_model(model_path, name="Model"):
 
 
 if __name__ == "__main__":
-    evaluate_model(model_path="models/cnn_20250514_152940/best_model.keras", name="CNN")
+    evaluate_model(model_path="models/cnn_20250523_185103/best_model.keras", name="CNN")
