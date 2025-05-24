@@ -4,7 +4,7 @@ from geopy.distance import geodesic
 nodes_path = "data/doc/nodes_averaged.txt"
 output_path = "data/doc/input_graph_edges.txt"
 
-DIST_THRESHOLD_KM = 2.0 #km
+DIST_THRESHOLD_KM = 4.0  # km
 
 nodes_df = pd.read_csv(nodes_path)
 
