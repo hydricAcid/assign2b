@@ -5,8 +5,9 @@ from collections import deque
 
 
 class BFS(SearchAlgorithm):
-    def __init__(self, graph):
+    def __init__(self, graph, timestamp=None):
         self.graph = graph
+        self.timestamp = timestamp
 
     def search(self, start, goal):
         from collections import deque
@@ -22,7 +23,9 @@ class BFS(SearchAlgorithm):
 
             if current not in visited:
                 visited.add(current)
-                for neighbor, _ in self.graph.get_neighbors(current):
+                for neighbor, _ in self.graph.get_neighbors(
+                    current, timestamp=self.timestamp
+                ):
                     if neighbor not in visited:
                         queue.append((neighbor, path + [neighbor]))
 

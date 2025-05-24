@@ -3,12 +3,11 @@ from .search_algorithm import SearchAlgorithm
 
 
 class GBFS(SearchAlgorithm):
-    def __init__(self, graph):
+    def __init__(self, graph, timestamp=None):
         self.graph = graph
+        self.timestamp = timestamp
 
     def search(self, start, goal):
-        import heapq
-
         queue = [(0, start, [start])]
         visited = set()
 
@@ -20,7 +19,11 @@ class GBFS(SearchAlgorithm):
 
             if current not in visited:
                 visited.add(current)
-                for neighbor, weight in self.graph.get_neighbors(current):
-                    heapq.heappush(queue, (weight, neighbor, path + [neighbor]))
+                for neighbor, _ in self.graph.get_neighbors(
+                    current, timestamp=self.timestamp
+                ):
+                    if neighbor not in visited:
+                        h = self.graph.heuristic(neighbor, goal)
+                        heapq.heappush(queue, (h, neighbor, path + [neighbor]))
 
         return None, float("inf")

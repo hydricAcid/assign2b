@@ -4,8 +4,9 @@ from .search_algorithm import SearchAlgorithm
 
 
 class DFS(SearchAlgorithm):
-    def __init__(self, graph):
+    def __init__(self, graph, timestamp=None):
         self.graph = graph
+        self.timestamp = timestamp
 
     def search(self, start, goal):
         stack = [(start, [start])]
@@ -19,7 +20,10 @@ class DFS(SearchAlgorithm):
 
             if current not in visited:
                 visited.add(current)
-                for neighbor, _ in self.graph.get_neighbors(current):
+                for neighbor, _ in self.graph.get_neighbors(
+                    current, timestamp=self.timestamp
+                ):
+
                     if neighbor not in visited:
                         stack.append((neighbor, path + [neighbor]))
 

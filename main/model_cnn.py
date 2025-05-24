@@ -31,27 +31,25 @@ from keras.api.callbacks import (
     TensorBoard,
 )
 
-from utils.preprocess import load_data
 
 CONFIG = {
     "model_name": "cnn",
-    "filters": [32, 64],                   
+    "filters": [32, 64],
     "kernel_sizes": [3, 5],
-    "dense_units": [32],                   
-    "dropout_rate": 0.2,                  
+    "dense_units": [32],
+    "dropout_rate": 0.2,
     "spatial_dropout": 0.1,
-    "learning_rate": 0.001,                
-    "batch_size": 64,                      
-    "epochs": 50,                         
-    "patience": 10,                      
-    "use_residual": True,               
-    "use_inception": True,                
+    "learning_rate": 0.001,
+    "batch_size": 64,
+    "epochs": 50,
+    "patience": 10,
+    "use_residual": True,
+    "use_inception": True,
     "use_batch_norm": True,
     "use_layer_norm": False,
-    "l1_reg": 1e-5,                       
+    "l1_reg": 1e-5,
     "l2_reg": 1e-4,
 }
-
 
 
 def inception_module(x, filters, kernel_sizes=[1, 3, 5], prefix="inception"):
@@ -169,9 +167,18 @@ def train_cnn_model():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     out_dir = f"models/cnn_{timestamp}"
     os.makedirs(out_dir, exist_ok=True)
-    X_train, y_train, X_val, y_val, X_test, y_test = load_data(
-        "data/processed/dataset.npz"
-    )
+    data = np.load("data/processed/dataset.npz")
+    X_train = data["X_train"]
+    X_test = data["X_test"]
+    y_train = data["y_train"]
+    y_test = data["y_test"]
+
+    split_idx = int(len(X_train) * 0.8)
+    X_val = X_train[split_idx:]
+    y_val = y_train[split_idx:]
+    X_train = X_train[:split_idx]
+    y_train = y_train[:split_idx]
+
     model = build_cnn_model((X_train.shape[1], X_train.shape[2]), CONFIG)
     callbacks = [
         ModelCheckpoint(

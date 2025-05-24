@@ -24,7 +24,7 @@ def solve_speed_from_flow(flow):
     return 60.0
 
 
-def flow_to_travel_time(flow_array, timestamp_array=None, distance_km=1.0):
+def flow_to_travel_time(flow_array, timestamp_array=None, distance_km=5.0):
     travel_times = []
 
     for i, flow in enumerate(flow_array):
@@ -47,7 +47,7 @@ def flow_to_travel_time(flow_array, timestamp_array=None, distance_km=1.0):
     return np.array(travel_times)
 
 
-def flow_to_travel_time_single(flow, timestamp, distance_km=1.0):
+def flow_to_travel_time_single(flow, timestamp, distance_km=5.0):
     if flow <= 351:
         speed = 60.0
     else:
@@ -60,7 +60,7 @@ def flow_to_travel_time_single(flow, timestamp, distance_km=1.0):
     return travel_time
 
 
-def convert_predictions_to_travel_time(input_csv, output_csv, distance_km=1.0):
+def convert_predictions_to_travel_time(input_csv, output_csv, distance_km=5.0):
     df = pd.read_csv(input_csv)
     df["Predicted_Travel_Time_min"] = df.apply(
         lambda row: flow_to_travel_time_single(
@@ -74,7 +74,7 @@ def convert_predictions_to_travel_time(input_csv, output_csv, distance_km=1.0):
 
 if __name__ == "__main__":
     convert_predictions_to_travel_time(
-        input_csv="evaluation_results/CNN_predictions.csv",
+        input_csv="evaluation_results/CNN_predictions_full.csv",
         output_csv="evaluation_results/CNN_predictions_with_tt.csv",
-        distance_km=1.0,
+        distance_km=5.0,
     )

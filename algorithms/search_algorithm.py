@@ -10,4 +10,6 @@ class SearchAlgorithm:
         return self.graph.is_destination(node)
 
     def get_neighbors(self, node):
-        return self.graph.get_neighbors(node)
+        return self.graph.get_neighbors(
+            node, self.timestamp if hasattr(self, "timestamp") else None
+        )

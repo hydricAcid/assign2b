@@ -4,13 +4,12 @@ from algorithms.search_algorithm import SearchAlgorithm
 
 
 class Custom2(SearchAlgorithm):
-    def __init__(self, graph):
+    def __init__(self, graph, timestamp=None):
         self.graph = graph
+        self.timestamp = timestamp
 
     def search(self, start, goal):
         # Uniform Cost Search
-        import heapq
-
         queue = [(0, start, [start])]
         visited = set()
 
@@ -22,7 +21,9 @@ class Custom2(SearchAlgorithm):
 
             if current not in visited:
                 visited.add(current)
-                for neighbor, weight in self.graph.get_neighbors(current):
+                for neighbor, weight in self.graph.get_neighbors(
+                    current, timestamp=self.timestamp
+                ):
                     if neighbor not in visited:
                         heapq.heappush(
                             queue, (cost + weight, neighbor, path + [neighbor])

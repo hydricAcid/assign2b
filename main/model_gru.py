@@ -134,6 +134,7 @@ def train_gru_model():
     X_train, y_train, X_val, y_val, X_test, y_test = load_data(
         "data/processed/dataset.npz"
     )
+
     model = build_gru_model((X_train.shape[1], X_train.shape[2]))
     callbacks = [
         ModelCheckpoint(

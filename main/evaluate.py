@@ -17,22 +17,23 @@ def evaluate_model(
     dataset_path,
     scaler_path,
     output_folder="evaluation_results",
-    distance_km=1.0,
+    distance_km=5.0,
 ):
     os.makedirs(output_folder, exist_ok=True)
 
-    data = np.load(dataset_path)
-    X_test = data["X_test"]
-    y_test = data["y_test"]
-    site_ids = data["site_ids_test"]
-    timestamps = data["timestamps_test"]
+    data = np.load(dataset_path, allow_pickle=True)
+
+    X = data["X"]
+    y = data["y"]
+    site_ids = data["site_ids"]
+    timestamps = data["timestamps"]
 
     model = load_model(model_path)
 
-    y_pred = model.predict(X_test).flatten()
+    y_pred = model.predict(X).flatten()
 
     scaler = load(scaler_path)
-    y_true = scaler.inverse_transform(y_test.reshape(-1, 1)).flatten()
+    y_true = scaler.inverse_transform(y.reshape(-1, 1)).flatten()
     y_pred = scaler.inverse_transform(y_pred.reshape(-1, 1)).flatten()
 
     travel_time_pred = flow_to_travel_time(y_pred, timestamps, distance_km=distance_km)
@@ -42,8 +43,8 @@ def evaluate_model(
     mse = mean_squared_error(travel_time_true, travel_time_pred)
     r2 = r2_score(travel_time_true, travel_time_pred)
 
-    metrics = {"test_mae": mae, "test_loss": mse, "test_r2": r2}
-    with open(os.path.join(output_folder, "evaluation.json"), "w") as f:
+    metrics = {"mae": mae, "mse": mse, "r2": r2}
+    with open(os.path.join(output_folder, "evaluation_full.json"), "w") as f:
         json.dump(metrics, f, indent=4)
 
     df = pd.DataFrame(
@@ -55,23 +56,30 @@ def evaluate_model(
             "TravelTime": travel_time_pred,
         }
     )
-    df.to_csv(os.path.join(output_folder, "CNN_predictions.csv"), index=False)
+
+    nodes_df = pd.read_csv("data/doc/nodes_averaged.txt")
+    df["SCATS_ID"] = df["SCATS_ID"].astype(int)
+    nodes_df["SCATS_ID"] = nodes_df["SCATS_ID"].astype(int)
+    df = df.merge(nodes_df, on="SCATS_ID", how="left")
+
+    output_file = os.path.join(output_folder, "CNN_predictions_full.csv")
+    df.to_csv(output_file, index=False)
 
     plt.figure(figsize=(10, 5))
     plt.plot(y_true[:200], label="True")
     plt.plot(y_pred[:200], label="Predicted")
     plt.legend()
-    plt.title("Prediction vs True Flow")
-    plt.savefig(os.path.join(output_folder, "CNN_plot.png"))
+    plt.title("Prediction vs True Flow (Full Data)")
+    plt.savefig(os.path.join(output_folder, "CNN_plot_full.png"))
     plt.close()
 
-    print("✅ Evaluation complete. MAE:", mae)
+    print("✅ Full Evaluation complete. MAE:", mae)
 
 
 if __name__ == "__main__":
     evaluate_model(
-        model_path="models/cnn_20250524_004759/best_model.keras",
+        model_path="models/cnn_20250524_215156/best_model.keras",
         dataset_path="data/processed/dataset.npz",
         scaler_path="data/processed/output_scaler.pkl",
-        distance_km=1.0,
+        distance_km=5.0,
     )
