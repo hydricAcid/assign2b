@@ -1,179 +1,83 @@
-import os
-import numpy as np
 import pandas as pd
+import numpy as np
+import os
 from sklearn.preprocessing import RobustScaler
-from datetime import timedelta
-import logging
-from joblib import dump
+import joblib
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - traffic_preprocessing - %(levelname)s - %(message)s",
+
+config = {
+    "look_back": 10,
+    "forecast_horizon": 1,
+    "output_dir": "data/processed"
+}
+
+
+df = pd.read_excel("data/raw/Scats_data_october_2006.xlsx", sheet_name="Data", header=1)
+df.columns = df.columns.astype(str).str.strip()
+df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+
+
+interval_columns = [f"V{str(i).zfill(2)}" for i in range(1, 97)]
+interval_columns = [col for col in interval_columns if col in df.columns]
+
+df_long = df.melt(
+    id_vars=["SCATS Number", "NB_LATITUDE", "NB_LONGITUDE", "Date"],
+    value_vars=interval_columns,
+    var_name="Interval",
+    value_name="Flow"
 )
-logger = logging.getLogger("traffic_preprocessing")
 
+df_long = df_long[~((df_long["NB_LATITUDE"] == 0) & (df_long["NB_LONGITUDE"] == 0))]
 
-def preprocess_data():
-    config = {
-        "look_back": 9,
-        "forecast_horizon": 1,
-        "test_size": 0.2,
-        "validation_size": 0.2,
-        "random_state": 42,
-    }
+def interval_to_minutes(interval): return int(interval[1:]) * 15
+df_long["TimeOffset"] = df_long["Interval"].apply(interval_to_minutes)
+df_long["Timestamp"] = df_long["Date"] + pd.to_timedelta(df_long["TimeOffset"], unit="m")
+df_long = df_long.dropna(subset=["Timestamp"])
 
-    logger.info(f"Starting preprocessing with config: {config}")
+df_long["hour"] = df_long["Timestamp"].dt.hour
+df_long["dayofweek"] = df_long["Timestamp"].dt.dayofweek
+df_long["month"] = df_long["Timestamp"].dt.month
+df_long["day"] = df_long["Timestamp"].dt.day
 
-    file_path = "data/raw/Scats_data_october_2006.xlsx"
-    df = pd.read_excel(file_path, sheet_name="Data", header=1)
-    df.columns = df.columns.astype(str).str.strip()
-    df = df.rename(columns={"Date": "Timestamp"})
+df_long.rename(columns={"SCATS Number": "SCATS_ID"}, inplace=True)
+df_long = df_long[["SCATS_ID", "Timestamp", "Flow", "hour", "dayofweek", "month", "day"]]
 
-    df_long = df.melt(
-        id_vars=["SCATS Number", "NB_LATITUDE", "NB_LONGITUDE", "Timestamp"],
-        var_name="Interval",
-        value_name="Flow",
-    )
+X, y, site_ids, timestamps = [], [], [], []
 
-    df_long = df_long[(df_long["NB_LATITUDE"] != 0) & (df_long["NB_LONGITUDE"] != 0)]
-    df_long = df_long[df_long["Interval"].str.match(r"^V\d{2}$")]
+for site_id, group in df_long.groupby("SCATS_ID"):
+    group = group.sort_values("Timestamp").reset_index(drop=True)
+    features = group[["Flow", "hour", "dayofweek", "month", "day"]].values.astype(np.float32)
 
-    def interval_to_time(iv):
-        idx = int(iv[1:])
-        return timedelta(minutes=15 * idx)
+    for i in range(len(features) - config["look_back"] - config["forecast_horizon"] + 1):
+        X.append(features[i:i+config["look_back"]])
+        y.append(features[i+config["look_back"]][0])
+        site_ids.append(site_id)
+        timestamps.append(group.loc[i+config["look_back"], "Timestamp"])
 
-    df_long["Time"] = df_long["Interval"].apply(interval_to_time)
-    df_long["Timestamp"] = (
-        pd.to_datetime(df_long["Timestamp"], errors="coerce") + df_long["Time"]
-    )
+X = np.array(X, dtype=np.float32)
+y = np.array(y, dtype=np.float32)
+site_ids = np.array(site_ids)
+timestamps = np.array(timestamps)
 
-    df_long = df_long.dropna(subset=["Timestamp", "Flow"])
-    df_long["Flow"] = pd.to_numeric(df_long["Flow"], errors="coerce")
-    df_long = df_long.dropna(subset=["Flow"])
-    df_long = df_long[df_long["Flow"] >= 0]
+flow_scaler = RobustScaler()
+y_scaled = flow_scaler.fit_transform(y.reshape(-1, 1)).flatten()
 
-    df_long["hour"] = df_long["Timestamp"].dt.hour
-    df_long["dayofweek"] = df_long["Timestamp"].dt.dayofweek  # ✅ thêm lại đặc trưng
+split_index = int(len(X) * 0.8)
+X_train, X_test = X[:split_index], X[split_index:]
+y_train, y_test = y_scaled[:split_index], y_scaled[split_index:]
+site_ids_test = site_ids[split_index:]
+timestamps_test = timestamps[split_index:]
 
-    avg_coords = (
-        df_long.groupby("SCATS Number")[["NB_LATITUDE", "NB_LONGITUDE"]]
-        .mean()
-        .reset_index()
-        .rename(columns={"NB_LATITUDE": "Avg_LAT", "NB_LONGITUDE": "Avg_LON"})
-    )
-    avg_coords.to_csv("data/doc/nodes_averaged.txt", index=False)
-    df_long = df_long.merge(avg_coords, on="SCATS Number", how="left")
+os.makedirs(config["output_dir"], exist_ok=True)
+np.savez_compressed(
+    os.path.join(config["output_dir"], "dataset.npz"),
+    X_train=X_train,
+    X_test=X_test,
+    y_train=y_train,
+    y_test=y_test,
+    site_ids_test=site_ids_test,
+    timestamps_test=timestamps_test
+)
+joblib.dump(flow_scaler, os.path.join(config["output_dir"], "output_scaler.pkl"))
 
-    os.makedirs("data/processed", exist_ok=True)
-    df_long.to_csv("data/processed/processed_data.csv", index=False)
-
-    logger.info("Preparing sequences for model training...")
-
-    X_all, y_all, site_ids_all, timestamps_all = [], [], [], []
-
-    for scats_id, df_group in df_long.groupby("SCATS Number"):
-        df_group = df_group.sort_values("Timestamp")
-        df_group = df_group[["Flow", "hour", "dayofweek", "Timestamp"]].copy()
-
-        data = df_group[["Flow", "hour", "dayofweek"]].values.astype(np.float32)
-        timestamps = df_group["Timestamp"].values
-
-        if len(data) < config["look_back"] + config["forecast_horizon"]:
-            continue
-
-        X, y, ts = [], [], []
-        for i in range(
-            len(data) - config["look_back"] - config["forecast_horizon"] + 1
-        ):
-            window = data[i : i + config["look_back"]]
-            target = data[i + config["look_back"] + config["forecast_horizon"] - 1][0]
-            timestamp = timestamps[
-                i + config["look_back"] + config["forecast_horizon"] - 1
-            ]
-
-            X.append(window)
-            y.append(target)
-            ts.append(timestamp)
-
-        X_all.append(np.array(X, dtype=np.float32))
-        y_all.append(np.array(y, dtype=np.float32))
-        site_ids_all += [int(scats_id)] * len(y)
-        timestamps_all += ts
-
-        logger.info(f"Processed SCATS {scats_id}: {len(y)} sequences")
-
-    X_all = np.concatenate(X_all).astype(np.float32)
-    y_all = np.concatenate(y_all).astype(np.float32)
-    site_ids_all = np.array(site_ids_all, dtype=np.int32)
-    timestamps_all = np.array(timestamps_all, dtype="datetime64[s]")
-
-    # Scale flow only (feature 0)
-    scaler_X = RobustScaler()
-    X_all[:, :, 0] = scaler_X.fit_transform(X_all[:, :, 0])
-
-    scaler_y = RobustScaler()
-    y_all_scaled = (
-        scaler_y.fit_transform(y_all.reshape(-1, 1)).flatten().astype(np.float32)
-    )
-    dump(scaler_y, "data/processed/output_scaler.pkl")
-
-    rng = np.random.RandomState(config["random_state"])
-    indices = rng.permutation(len(X_all))
-
-    X_all = X_all[indices]
-    y_all_scaled = y_all_scaled[indices]
-    site_ids_all = site_ids_all[indices]
-    timestamps_all = timestamps_all[indices]
-
-    N = len(X_all)
-    test_size = int(config["test_size"] * N)
-    val_size = int(config["validation_size"] * N)
-
-    X_test = X_all[:test_size]
-    y_test = y_all_scaled[:test_size]
-    site_ids_test = site_ids_all[:test_size]
-    timestamps_test = timestamps_all[:test_size]
-
-    X_val = X_all[test_size : test_size + val_size]
-    y_val = y_all_scaled[test_size : test_size + val_size]
-    site_ids_val = site_ids_all[test_size : test_size + val_size]
-    timestamps_val = timestamps_all[test_size : test_size + val_size]
-
-    X_train = X_all[test_size + val_size :]
-    y_train = y_all_scaled[test_size + val_size :]
-    site_ids_train = site_ids_all[test_size + val_size :]
-    timestamps_train = timestamps_all[test_size + val_size :]
-
-    np.savez_compressed(
-        "data/processed/dataset.npz",
-        X_train=X_train,
-        y_train=y_train,
-        X_val=X_val,
-        y_val=y_val,
-        X_test=X_test,
-        y_test=y_test,
-        site_ids_train=site_ids_train,
-        site_ids_val=site_ids_val,
-        site_ids_test=site_ids_test,
-        timestamps_train=timestamps_train,
-        timestamps_val=timestamps_val,
-        timestamps_test=timestamps_test,
-    )
-
-    logger.info("✅ Preprocessing complete. Total sequences: %d", len(X_all))
-
-
-def load_data(npz_path):
-    data = np.load(npz_path)
-    X_train = data["X_train"]
-    y_train = data["y_train"]
-    X_val = data["X_val"]
-    y_val = data["y_val"]
-    X_test = data["X_test"]
-    y_test = data["y_test"]
-
-    return X_train, y_train, X_val, y_val, X_test, y_test
-
-
-if __name__ == "__main__":
-    preprocess_data()
+print("✅ Data preprocessing complete. Saved to:", config["output_dir"])
